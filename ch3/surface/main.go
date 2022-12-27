@@ -1,6 +1,6 @@
 // Exercises 3.1, 3.2, 3.3, 3.4 from gopl.io
 
-package main
+package surface
 
 import (
 	"flag"
