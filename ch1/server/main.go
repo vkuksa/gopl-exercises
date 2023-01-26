@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	drawer "gobook/ch1/lissajous"
+	drawer "gopl-exercises/ch1/lissajous"
 )
 
 func main() {

@@ -1,3 +1,3 @@
-module gobook
+module gopl-exercises
 
 go 1.19

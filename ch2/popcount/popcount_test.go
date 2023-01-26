@@ -3,7 +3,7 @@ package popcount_test
 import (
 	"testing"
 
-	"gobook/ch2/popcount"
+	"gopl-exercises/ch2/popcount"
 )
 
 func BitCount(x uint64) int {
