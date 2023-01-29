@@ -1,6 +1,6 @@
 // Exercise 4.10 from gopl.io
 
-package main
+package searcher
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"gopl-exercises/ch4/json/issues/github" // Exported module from the book
+	"gopl-exercises/ch4/json/issues/github"
 )
 
 const (
@@ -17,19 +17,19 @@ const (
 	year  = 8766
 )
 
-func sortResultsByTimestamp(issues *github.IssuesSearchResult, hours int) *github.IssuesSearchResult {
+func filterResultsByTimeframe(issues *github.IssuesSearchResult, hours int) *github.IssuesSearchResult {
 	now := time.Now()
 
-	timestamped := &github.IssuesSearchResult{TotalCount: 0, Items: nil}
+	filtered := &github.IssuesSearchResult{TotalCount: 0, Items: nil}
 	for _, issue := range issues.Items {
 		difference := now.Sub(issue.CreatedAt)
 		if int(difference.Hours()) < hours {
-			timestamped.Items = append(timestamped.Items, issue)
+			filtered.Items = append(filtered.Items, issue)
 		}
 	}
-	timestamped.TotalCount = len(timestamped.Items)
+	filtered.TotalCount = len(filtered.Items)
 
-	return timestamped
+	return filtered
 }
 
 func printResults(issues *github.IssuesSearchResult) {
@@ -46,9 +46,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	monthly := sortResultsByTimestamp(result, month)
-	yearly := sortResultsByTimestamp(result, year)
-	allTime := sortResultsByTimestamp(result, math.MaxInt)
+	monthly := filterResultsByTimeframe(result, month)
+	yearly := filterResultsByTimeframe(result, year)
+	allTime := filterResultsByTimeframe(result, math.MaxInt)
 
 	fmt.Println("Monthly")
 	printResults(monthly)

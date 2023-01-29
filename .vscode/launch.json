@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${fileDirname}",
-            "args": ["GitHub", "is:issue", "Golang"]
+            "args": ["update", "${env:TOKEN}", "vkuksa", "FindIT", "5"]
         }
     ]
 }
