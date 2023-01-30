@@ -19,11 +19,12 @@ import (
 const (
 	url            = "https://xkcd.com/%d/info.0.json"
 	usage          = `xkcd <search_strings>`
-	cacheRoot      = "/home/waterfall/tmp/"
-	indexPath      = cacheRoot + "index"
 	episodes       = 2730 // How to flexibly get number of episodes?
 	matchThreshold = 3
 )
+
+var cacheRoot string
+var indexPath string
 
 type Episode struct {
 	Month      string
@@ -55,6 +56,10 @@ func retrieveDataOfEpisode(number int) []byte {
 }
 
 func init() {
+	cacheRoot = os.Getenv("HOME") + "/xkcd/"
+	indexPath = cacheRoot + "index"
+	log.Println("Cache root " + cacheRoot)
+
 	if _, err := os.Stat(cacheRoot); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(cacheRoot, os.ModePerm)
 		if err != nil {
