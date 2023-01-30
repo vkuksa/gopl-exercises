@@ -3,10 +3,12 @@ package github
 import "time"
 
 const (
-	SearchIssuesURL  = "https://api.github.com/search/issues"
-	AccountIssuesURL = "https://api.github.com/issues"
-	RepoIssueURL     = "https://api.github.com/repos/%s/%s/issues/%d"
-	RepoIssuesURL    = "https://api.github.com/repos/%s/%s/issues"
+	GithubApiURL     = "https://api.github.com"
+	SearchIssuesURL  = GithubApiURL + "/search/issues"
+	AccountIssuesURL = GithubApiURL + "/issues"
+	RepoIssueURL     = GithubApiURL + "/repos/%s/%s/issues/%d"
+	RepoIssuesURL    = GithubApiURL + "/repos/%s/%s/issues"
+	//label:bug
 )
 
 type IssuesSearchResult struct {

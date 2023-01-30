@@ -11,7 +11,7 @@ import (
 	"path"
 	"strconv"
 
-	"gopl-exercises/ch4/json/issues/github"
+	"gopl-exercises/ch4/github"
 )
 
 const (
