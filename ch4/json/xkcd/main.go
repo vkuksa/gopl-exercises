@@ -21,6 +21,8 @@ const (
 	usage          = `xkcd <search_strings>`
 	episodes       = 2730 // How to flexibly get number of episodes?
 	matchThreshold = 3
+
+	flags = os.O_WRONLY | os.O_CREATE | os.O_EXCL
 )
 
 var cacheRoot string
@@ -55,6 +57,34 @@ func retrieveDataOfEpisode(number int) []byte {
 	return buf.Bytes()
 }
 
+func writeDataToCache(data []byte, filename string) bool {
+	cacheEntry, err := os.OpenFile(filename, flags, 0666)
+	if err != nil {
+		log.Printf("Couldn't open cache entry: %s", filename)
+		return false
+	}
+	defer cacheEntry.Close()
+
+	cacheEntry.Write(data)
+	return true
+}
+
+func readDataFromCacheEntry(entry string) ([]byte, error) {
+	cache, err := os.Open(cacheRoot + entry)
+	if err != nil {
+		return nil, fmt.Errorf("opening cache entry: %s", err)
+
+	}
+	defer cache.Close()
+
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(cache)
+	if err != nil {
+		log.Printf("reading from cache failed: %s", err.Error())
+	}
+	return buf.Bytes(), nil
+}
+
 func init() {
 	cacheRoot = os.Getenv("HOME") + "/xkcd/"
 	indexPath = cacheRoot + "index"
@@ -66,7 +96,6 @@ func init() {
 			log.Fatal(err)
 		}
 
-		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 		index, err := os.OpenFile(indexPath, flags, 0666)
 		if err != nil {
 			log.Fatal(err)
@@ -84,21 +113,19 @@ func init() {
 			log.Println("Writing: " + iStr + " of size " + strconv.Itoa(len(data)))
 
 			filename := cacheRoot + iStr
-			cacheEntry, err := os.OpenFile(filename, flags, 0666)
-			if err != nil {
-				log.Printf("Couldn't open cache entry: %s", filename)
-				continue
-			}
-			defer cacheEntry.Close()
 
-			_, cutted, found := bytes.Cut(data, []byte("alt\": \""))
+			_, alt, found := bytes.Cut(data, []byte("alt\": \""))
 			if !found {
 				log.Fatal("Could not find a title in a JSON.")
 			}
-			cutted, _, _ = bytes.Cut(cutted, []byte("\""))
+			alt, _, _ = bytes.Cut(alt, []byte("\""))
 
-			cacheEntry.Write(data)
-			index.WriteString(iStr + ":" + string(cutted) + "\n")
+			ok := writeDataToCache(data, filename)
+			if !ok {
+				continue
+			}
+
+			index.WriteString(iStr + ":" + string(alt) + "\n")
 			// Only alt is written into index. Maybe some keyword detection algorithm would be better?
 		}
 
@@ -130,20 +157,14 @@ func main() {
 			number, _, _ := bytes.Cut([]byte(line), []byte(":"))
 			numberStr := string(number)
 
-			cache, err := os.Open(cacheRoot + numberStr)
+			data, err := readDataFromCacheEntry(numberStr)
 			if err != nil {
-				log.Printf("Cache opening failed: " + err.Error())
+				log.Printf("reading cache entry %s failed with %s", numberStr, err.Error())
 				continue
 			}
-			defer cache.Close()
 
-			var buf bytes.Buffer
-			_, err = buf.ReadFrom(cache)
-			if err != nil {
-				log.Printf("Failed cache entry reading: " + numberStr + " with " + err.Error())
-			}
 			var episode *Episode
-			err = json.Unmarshal(buf.Bytes(), &episode)
+			err = json.Unmarshal(data, &episode)
 			if err != nil {
 				log.Printf("Failed unmarshalling of episode " + numberStr + " with " + err.Error())
 			}
