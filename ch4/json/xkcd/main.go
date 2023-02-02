@@ -89,6 +89,7 @@ func init() {
 				log.Printf("Couldn't open cache entry: %s", filename)
 				continue
 			}
+			defer cacheEntry.Close()
 
 			_, cutted, found := bytes.Cut(data, []byte("alt\": \""))
 			if !found {
