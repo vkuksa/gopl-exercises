@@ -54,11 +54,8 @@ func (t *tree) String() string {
 		}
 
 		depth++
-		traverse(t.left)
-		for i := 0; i < int((1.0/float64(depth))*10.0); i++ {
-			fmt.Fprint(&buf, " ")
-		}
-		fmt.Fprintf(&buf, "%d\n", t.value)
+		traverse(t.left
+		fmt.Fprintf(&buf, "%*s%d\n", int(1.0/float64(depth)*10), "", t.value)
 		traverse(t.right)
 		depth--
 	}
