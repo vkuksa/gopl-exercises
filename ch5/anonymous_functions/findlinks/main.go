@@ -91,7 +91,7 @@ func makeLocalCopiesOf(links []string) {
 
 func crawl(link string) []string {
 	fmt.Println(link)
-	list, err := links.Extract(link)
+	list, err := links.Extract(link, make(chan struct{}))
 	if err != nil {
 		log.Print(err)
 	}

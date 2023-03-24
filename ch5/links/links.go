@@ -10,14 +10,18 @@ package links
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"golang.org/x/net/html"
 )
 
 // Extract makes an HTTP GET request to the specified URL, parses
 // the response as HTML, and returns the links in the HTML document.
-func Extract(url string) ([]string, error) {
-	resp, err := http.Get(url)
+func Extract(url string, cancel chan struct{}) ([]string, error) {
+	req, err := http.NewRequest("GET", url, strings.NewReader(""))
+	req.Cancel = cancel
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
