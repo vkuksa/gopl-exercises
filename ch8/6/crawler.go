@@ -23,7 +23,7 @@ type Links struct {
 
 func crawl(url string) (results []string) {
 	fmt.Println(url)
-	results, err := links.Extract(url)
+	results, err := links.Extract(url, make(chan struct{}))
 	if err != nil {
 		log.Print(err)
 	}
