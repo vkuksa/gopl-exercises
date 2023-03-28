@@ -14,66 +14,64 @@ import (
 	"time"
 )
 
-var done = make(chan struct{})
-
-type FetchInfo struct {
-	url      string
-	filename string
-	n        int64
-	err      error
-}
-
 // !+
 // Fetch downloads the URL and returns the
 // name and length of the local file.
-func fetch(url string) FetchInfo {
+func fetch(url string, cancel chan struct{}) (filename string, written int64, err error) {
 	req, err := http.NewRequest("GET", url, strings.NewReader(""))
-	req.Cancel = done
+	req.Cancel = cancel
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return FetchInfo{url, "", 0, err}
+		return
 	}
-	defer resp.Body.Close()
+	var f *os.File
+	defer func() {
+		resp.Body.Close()
 
-	local := path.Base(resp.Request.URL.Path)
-	if local == "/" {
-		local = "index.html"
+		if closeErr := f.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+
+	filename = path.Base(resp.Request.URL.Path)
+	if filename == "/" {
+		filename = "index.html"
 	}
-	f, err := os.Create(local)
+	f, err = os.Create(filename)
 	if err != nil {
-		return FetchInfo{url, "", 0, err}
+		return
 	}
-	n, err := io.Copy(f, resp.Body)
-	// Close file, but prefer error from Copy, if any.
-	if closeErr := f.Close(); err == nil {
-		err = closeErr
-	}
-	return FetchInfo{url, local, n, err}
+	written, err = io.Copy(f, resp.Body)
+	return
 }
 
 //!-
 
 func main() {
-	response := make(chan FetchInfo)
+	cancel := make(chan struct{})
+	received := make(chan struct{})
 
 	for _, url := range os.Args[1:] {
 		go func(url string) {
-			info := fetch(url)
-			if info.err != nil {
-				fmt.Fprintf(os.Stderr, "fetch %s: %v\n", info.url, info.err)
+			filename, written, err := fetch(url, cancel)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "fetch %s: %v\n", url, err)
 			} else {
-				response <- info
+				close(cancel)
+				fmt.Printf("%s => %s (%d bytes).\n", url, filename, written)
+				received <- struct{}{}
 			}
 		}(url)
 	}
 
 	select {
-	case info := <-response:
-		fmt.Printf("%s => %s (%d bytes).\n", info.url, info.filename, info.n)
 	case <-time.After(10 * time.Second):
+		close(cancel)
 		fmt.Println("Polling time exceeded")
+	case <-received:
+		os.Exit(0)
 	}
 
-	close(done)
+	os.Exit(1)
 }
