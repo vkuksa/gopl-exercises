@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 // !+broadcaster
@@ -69,25 +70,49 @@ func broadcaster() {
 
 // !+handleConn
 func handleConn(conn net.Conn) {
-	who := conn.RemoteAddr().String()
-	ch := make(chan string) // outgoing client messages
-	client := client{who, ch}
+	send := make(chan string) // outgoing client messages
+	recv := make(chan string) // ingoing client messages
+	client := client{conn.RemoteAddr().String(), send}
 
-	go clientWriter(conn, ch)
+	go clientWriter(conn, send)
+	go clientReader(conn, recv)
 
-	ch <- "You are " + who
-	messages <- who + " has arrived"
+	send <- "You are " + client.name
+	messages <- client.name + " has arrived"
 	entering <- client
 
+	defer func() {
+		conn.Close()
+		leaving <- client
+		messages <- client.name + " has left"
+	}()
+
+loop:
+	for {
+		select {
+		case msg, ok := <-recv:
+			if !ok {
+				break loop
+			}
+			messages <- client.name + ": " + msg
+		case <-time.After(5 * time.Second):
+			// Not scheduling it into send, so no need on syncronisation of sending a message
+			fmt.Fprintln(conn, "You were innactive for too long. Disconnecting.") // NOTE: ignoring network errors
+			break loop
+		}
+	}
+
+}
+
+//!-handleConn
+
+func clientReader(conn net.Conn, ch chan<- string) {
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		messages <- who + ": " + input.Text()
+		ch <- input.Text()
 	}
-	// NOTE: ignoring potential errors from input.Err()
 
-	leaving <- client
-	messages <- who + " has left"
-	conn.Close()
+	close(ch)
 }
 
 func clientWriter(conn net.Conn, ch <-chan string) {
@@ -95,8 +120,6 @@ func clientWriter(conn net.Conn, ch <-chan string) {
 		fmt.Fprintln(conn, msg) // NOTE: ignoring network errors
 	}
 }
-
-//!-handleConn
 
 // !+main
 func main() {
