@@ -70,22 +70,24 @@ func broadcaster() {
 
 // !+handleConn
 func handleConn(conn net.Conn) {
+	defer conn.Close()
+
 	send := make(chan string) // outgoing client messages
 	recv := make(chan string) // ingoing client messages
-	client := client{conn.RemoteAddr().String(), send}
 
 	go clientWriter(conn, send)
 	go clientReader(conn, recv)
 
-	send <- "You are " + client.name
+	send <- "Enter your name: "
+	name, ok := <-recv
+	if !ok {
+		return
+	}
+
+	client := client{name, send}
+
 	messages <- client.name + " has arrived"
 	entering <- client
-
-	defer func() {
-		conn.Close()
-		leaving <- client
-		messages <- client.name + " has left"
-	}()
 
 loop:
 	for {
@@ -102,6 +104,8 @@ loop:
 		}
 	}
 
+	leaving <- client
+	messages <- client.name + " has left"
 }
 
 //!-handleConn
