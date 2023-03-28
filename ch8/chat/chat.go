@@ -25,8 +25,8 @@ import (
 
 // !+broadcaster
 type client struct {
-	name    string
-	msgChan chan<- string // an outgoing message channel
+	name string
+	out  chan<- string // an outgoing message channel
 }
 
 var (
@@ -52,16 +52,20 @@ func broadcaster() {
 			// Broadcast incoming message to all
 			// clients' outgoing message channels.
 			for client := range clients {
-				client.msgChan <- msg
+				select {
+				case client.out <- msg:
+				default:
+					log.Printf("Skipped sending message %s client %s as it was not ready to proceed. ", msg, client.name)
+				}
 			}
 
 		case client := <-entering:
 			clients[client] = true
-			client.msgChan <- "List of active clients: " + clientsToString()
+			client.out <- "List of active clients: " + clientsToString()
 
 		case client := <-leaving:
 			delete(clients, client)
-			close(client.msgChan)
+			close(client.out)
 		}
 	}
 }
@@ -72,8 +76,8 @@ func broadcaster() {
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 
-	send := make(chan string) // outgoing client messages
-	recv := make(chan string) // ingoing client messages
+	send := make(chan string, 5) // outgoing client messages
+	recv := make(chan string)    // ingoing client messages
 
 	go clientWriter(conn, send)
 	go clientReader(conn, recv)
